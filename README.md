@@ -11,12 +11,12 @@ Swagger документация: http://localhost:8080/swagger/index.html#/
 
 Технический стек
 
-Язык программирования: Go 1.25.1
-Web-фреймворк: Gin
-База данных: PostgreSQL
-Миграции: Migrate
-Валидация: go-playground/validator
-Логгирование: slog
-Документация API: Swagger
-Кэш: Redis 
-Контейнеризация: Docker, Docker Compose
+- Язык программирования: Go 1.25.1
+- Web-фреймворк: Gin
+- База данных: PostgreSQL
+- Миграции: Migrate
+- Валидация: go-playground/validator
+- Логгирование: slog
+- Документация API: Swagger
+- Кэш: Redis 
+- Контейнеризация: Docker, Docker Compose
