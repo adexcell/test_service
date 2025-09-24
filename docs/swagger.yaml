@@ -1,0 +1,206 @@
+definitions:
+  domain.Delivery:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      region:
+        type: string
+      zip:
+        type: string
+    required:
+    - address
+    - city
+    - email
+    - name
+    - phone
+    - region
+    - zip
+    type: object
+  domain.Items:
+    properties:
+      brand:
+        type: string
+      chrt_id:
+        type: integer
+      name:
+        type: string
+      nm_id:
+        type: integer
+      price:
+        minimum: 0
+        type: integer
+      rid:
+        type: string
+      sale:
+        description: Assuming sale is a percentage
+        maximum: 100
+        minimum: 0
+        type: integer
+      size:
+        type: string
+      total_price:
+        minimum: 0
+        type: integer
+    required:
+    - brand
+    - chrt_id
+    - name
+    - nm_id
+    - price
+    - rid
+    - total_price
+    type: object
+  domain.Order:
+    properties:
+      customer_id:
+        type: string
+      delivery:
+        allOf:
+        - $ref: '#/definitions/domain.Delivery'
+        description: Add validation for Delivery struct
+      delivery_service:
+        type: string
+      entry:
+        type: string
+      internal_signature:
+        type: string
+      items:
+        description: Dive into the slice and validate each item
+        items:
+          $ref: '#/definitions/domain.Items'
+        type: array
+      locale:
+        type: string
+      order_uid:
+        type: string
+      payment:
+        $ref: '#/definitions/domain.Payment'
+      shardkey:
+        type: string
+      sm_id:
+        type: integer
+      track_number:
+        type: string
+    required:
+    - customer_id
+    - delivery
+    - delivery_service
+    - entry
+    - items
+    - locale
+    - payment
+    - shardkey
+    - sm_id
+    - track_number
+    type: object
+  domain.Payment:
+    properties:
+      amount:
+        minimum: 0
+        type: integer
+      bank:
+        type: string
+      currency:
+        description: Assuming currency is a 3-letter code
+        type: string
+      delivery_cost:
+        minimum: 0
+        type: integer
+      goods_total:
+        minimum: 0
+        type: integer
+      payment_dt:
+        type: integer
+      provider:
+        type: string
+      transaction:
+        type: string
+    required:
+    - amount
+    - bank
+    - currency
+    - delivery_cost
+    - goods_total
+    - payment_dt
+    - provider
+    - transaction
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  handler.OrderResponse:
+    properties:
+      order:
+        $ref: '#/definitions/domain.Order'
+    type: object
+info:
+  contact: {}
+paths:
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт заказ с переданными данными
+      parameters:
+      - description: Данные заказа
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Order'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ID созданного заказа
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Создать новый заказ
+  /orders/{id}:
+    get:
+      description: Возвращает заказ по уникальному идентификатору
+      parameters:
+      - description: ID заказа
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.OrderResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получить заказ по ID
+swagger: "2.0"

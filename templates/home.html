@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Viewer</title>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    integrity="sha512-9usAa10IRO0HhonpyAIVpjrylPvoDwiPUiKdWk5t3PyolY1cOd4DSE0Ga+ri4AuTroPR5aQvXU9xC6qOPnzFeg=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  />
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color:rgb(146, 152, 236);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: #5e57a7;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      width: 80%;
+      max-width: 800px;
+      text-align: left;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    input[type='text'] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      flex-grow: 1;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #order-details {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      background-color: #f9f9f9;
+      display: none;
+    }
+    h2 {
+      color: #333;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+    .detail-label {
+      width: 40%;
+      font-weight: bold;
+      color: #555;
+    }
+    .detail-value {
+      width: 60%;
+      color: #777;
+      word-wrap: break-word;
+    }
+    #error-message {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        width: 95%;
+      }
+      .detail-row {
+        flex-direction: column;
+      }
+      .detail-label,
+      .detail-value {
+        width: 100%;
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Order Viewer</h1>
+    <div class="input-group">
+      <label for="order-id">Order ID:</label>
+      <input type="text" id="order-id" name="order-id" placeholder="Enter Order ID" />
+      <button onclick="getOrderDetails()"><i class="fas fa-search"></i> Get Order</button>
+    </div>
+
+    <div id="order-details">
+      <h2>Order Details</h2>
+      <div id="details-content"></div>
+    </div>
+
+    <div id="error-message"></div>
+  </div>
+
+  <script>
+  async function getOrderDetails() {
+  const orderId = document.getElementById("order-id").value.trim();
+  const orderDetailsDiv = document.getElementById("order-details");
+  const detailsContentDiv = document.getElementById("details-content");
+  const errorMessageDiv = document.getElementById("error-message");
+
+  orderDetailsDiv.style.display = "none";
+  detailsContentDiv.innerHTML = "";
+  errorMessageDiv.innerText = "";
+
+  if (!orderId) {
+    errorMessageDiv.innerText = "Please enter an Order ID.";
+    return;
+  }
+
+  try {
+    const response = await fetch(`/orders/${orderId}`);
+    if (!response.ok) {
+      let errorMessage = `Error! Code: ${response.status}`;
+      try {
+        const errorBody = await response.json();
+        if (errorBody.error) {
+          errorMessage += `, Message: ${errorBody.error}`;
+        } else if (errorBody.message) {
+          errorMessage += `, Message: ${errorBody.message}`;
+        }
+      } catch {}
+      throw new Error(errorMessage);
+    }
+
+   const order = await response.json();
+console.log("Order Data:", order);
+
+if (!order.order) {
+  throw new Error("Invalid response structure: missing order property");
+}
+
+displayOrderDetails(order.order);
+orderDetailsDiv.style.display = "block";
+
+  } catch (error) {
+    console.error("Failed to fetch order:", error);
+    errorMessageDiv.innerText = `Error fetching order: ${error.message}`;
+    orderDetailsDiv.style.display = "none";
+  }
+}
+
+
+    function displayOrderDetails(order) {
+      const detailsContentDiv = document.getElementById('details-content');
+      if (!detailsContentDiv) {
+        console.error('Element #details-content not found');
+        return;
+      }
+
+      let html = '';
+
+      // General Information
+      html += `<h3>General Information</h3>`;
+      html += detailRow('Order UID', order.order_uid);
+      html += detailRow('Track Number', order.track_number);
+      html += detailRow('Entry', order.entry);
+      html += detailRow('Customer ID', order.customer_id);
+      html += detailRow('Delivery Service', order.delivery_service);
+
+      // Delivery
+      if (order.delivery) {
+        html += `<h3>Delivery Details</h3>`;
+        html += detailRow('Name', order.delivery.name);
+        html += detailRow('Phone', order.delivery.phone);
+        html += detailRow('Zip', order.delivery.zip);
+        html += detailRow('City', order.delivery.city);
+        html += detailRow('Address', order.delivery.address);
+        html += detailRow('Region', order.delivery.region);
+        html += detailRow('Email', order.delivery.email);
+      }
+
+      // Payment
+      if (order.payment) {
+        html += `<h3>Payment Details</h3>`;
+        html += detailRow('Transaction', order.payment.transaction);
+        html += detailRow('Currency', order.payment.currency);
+        html += detailRow('Provider', order.payment.provider);
+        html += detailRow('Amount', order.payment.amount);
+        html += detailRow('Payment Date', order.payment.payment_dt);
+        html += detailRow('Bank', order.payment.bank);
+        html += detailRow('Delivery Cost', order.payment.delivery_cost);
+        html += detailRow('Goods Total', order.payment.goods_total);
+      }
+
+      // Items
+      if (order.items && order.items.length > 0) {
+        html += `<h3>Items Details</h3>`;
+        order.items.forEach((item, index) => {
+          html += `<h4>Item ${index + 1}</h4>`;
+          html += detailRow('Chart ID', item.chrt_id);
+          html += detailRow('Price', item.price);
+          html += detailRow('RID', item.rid);
+          html += detailRow('Name', item.name);
+          html += detailRow('Sale', item.sale);
+          html += detailRow('Size', item.size);
+          html += detailRow('Total Price', item.total_price);
+          html += detailRow('NmID', item.nm_id);
+          html += detailRow('Brand', item.brand);
+        });
+      }
+
+      detailsContentDiv.innerHTML = html;
+    }
+
+    function detailRow(label, value) {
+      return `
+        <div class="detail-row">
+          <div class="detail-label">${label}:</div>
+          <div class="detail-value">${value !== undefined && value !== null ? value : 'N/A'}</div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

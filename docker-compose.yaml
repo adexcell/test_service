@@ -1,0 +1,95 @@
+version: "3.9"
+
+services:
+  App:
+    container_name: App
+    image: service
+    ports:
+      - "8080:8080"
+    depends_on:
+      pg-local:
+        condition: service_healthy
+      redis-local:
+        condition: service_started
+      kafka-local:
+        condition: service_started
+    restart: always
+    volumes:
+      - ./templates:/app/templates
+    networks:
+      - app-network
+ 
+  migrate:
+    image: migrate/migrate:v4.15.2
+    container_name: migration
+    depends_on:
+      - pg-local
+      - App
+    command: [
+      "-path=/app/migrations", 
+      "-database=postgres://postgres:1@pg-local:5432/postgres?sslmode=disable",
+      "up"
+    ]
+    volumes:
+      - ./internal/migrations:/app/migrations 
+    networks:
+      - app-network
+  pg-local:
+    container_name: pg-local
+    image: postgres:latest
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-local-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    env_file:
+      - .env
+    networks:
+      - app-network
+
+  redis-local:
+    container_name: redis-local
+    image: docker.io/bitnami/redis:latest
+    restart: always
+    ports:
+      - "6379:6379"
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - redis-local-data:/bitnami/redis/data
+    networks:
+      - app-network
+  kafka-local:
+    container_name: kafka-local
+    image: docker.io/bitnami/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@localhost:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka-local:9092,CONTROLLER://kafka-local:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pg-local-data:
+  redis-local-data:
